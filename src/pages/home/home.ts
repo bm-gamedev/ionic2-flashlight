@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
-import { ToastController } from 'ionic-angular';
+import { ToastController, Platform } from 'ionic-angular';
 import { Flashlight } from '@ionic-native/flashlight';
+import { Dialogs } from '@ionic-native/dialogs';
 
 @Component({
   selector: 'page-home',
@@ -8,30 +9,34 @@ import { Flashlight } from '@ionic-native/flashlight';
 })
 export class HomePage {
   private isOn: boolean = false;
+  private available: boolean = false;
 
-  constructor(public toastCtrl: ToastController, public flashlight: Flashlight) {  }
-
-  async isAvailable(): Promise<boolean> {
-    try {
-      return await this.flashlight.available();
-    }
-    catch (e) {
-      this.showToast(e);
-    }
+  constructor(
+    private toastCtrl: ToastController,
+    private flashlight: Flashlight,
+    private dialogs: Dialogs,
+    private platform: Platform) {
+    this.platform.ready().then(() => {
+      this.flashlight.available()
+        .then(() => {
+          this.available = true;
+        }).catch((e) => {
+          this.showToast("Flashlight isn't available!");
+        })
+    })
   }
 
-  async toggleFlash(): Promise<void> {
-    try {
-      let available = await this.isAvailable();
-      if (available) {
-        await this.flashlight.toggle;
-        this.isOn = !this.isOn;
-      } else {
-        this.showToast("Flashlight isn't available.")
-      }
-    }
-    catch (e) {
-      this.showToast(e);
+  toggleFlash() {
+    if (this.available) {
+      this.flashlight.toggle()
+        .then(() => {
+          this.isOn = !this.isOn;
+        })
+        .catch((e) => {
+          this.showToast(e);
+        })
+    } else {
+      this.showAlert("Flashlight", "Flashlight isn't available!");
     }
   }
 
@@ -41,5 +46,9 @@ export class HomePage {
       duration: 3000
     });
     toast.present();
+  }
+
+  showAlert(title: string, msg: string) {
+    this.dialogs.alert(msg, title).then(() => { });
   }
 }
